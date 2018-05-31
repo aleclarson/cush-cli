@@ -1,0 +1,12 @@
+{
+  "name": "cush-cli",
+  "version": "0.0.0",
+  "main": "js/index",
+  "description": "Bundles your project when files change",
+  "repository": "https://github.com/aleclarson/cush-cli.git",
+  "license": "MIT",
+  "scripts": {
+    "build": "coffee-build src -o js",
+    "prepublishOnly": "prepv -i || true"
+  }
+}
