@@ -9,7 +9,7 @@ cush <main> -o <dest> -t <platform> [-p]
 &nbsp;
 
 The `platform` may exist in `dest` instead of being
-specified separately.
+specified separately. The only difference is the bundle path.
 
 ```sh
 cush index.js -o bundle.web.js
@@ -18,14 +18,11 @@ cush index.js -o bundle.web.js
 cush index.js -o bundle.js -t web
 ```
 
-The only difference is the bundle path.
-
 &nbsp;
 
 The `-p` flag minifies the bundle and exits after the first build.
-Additionally, the bundle name has a content hash.
-
-This is known as the "production" bundle.
+Additionally, the bundle name has a content hash. This is known as
+the "production" bundle.
 
 ## Install
 
