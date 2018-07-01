@@ -1,12 +1,25 @@
 {
   "name": "cush-cli",
   "version": "0.0.0",
-  "main": "js/index",
-  "description": "Bundles your project when files change",
+  "main": "lib/index",
+  "description": "Bundle your project when files change",
   "repository": "https://github.com/aleclarson/cush-cli.git",
   "license": "MIT",
   "scripts": {
-    "build": "coffee-build src -o js",
+    "build": "coffee-build src -o lib",
     "prepublishOnly": "prepv -i || true"
+  },
+  "bin": {
+    "cush": "./cush"
+  },
+  "dependencies": {
+    "cush": "^0.1.0",
+    "lodge": "^0.0.3",
+    "saxon": "^0.1.4",
+    "slurm": "^0.3.0"
+  },
+  "devDependencies": {
+    "coffeescript": "^2.3.0",
+    "wch-coffee": "*"
   }
 }
