@@ -13,7 +13,7 @@ if /^(-h)?$/.test args._
     process.exit()
 
 log = require 'lodge'
-log.prefix log.lgreen '[cli]'
+log.prefix log.coal '[cli]'
 
 fatal = (err) ->
 
