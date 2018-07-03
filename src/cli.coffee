@@ -58,7 +58,8 @@ catch err
 if dev
   bun.save = ->
     {content, map} = await @_result
-    await fs.mkdir path.dirname(dest)
+    await fs.mkdir parent = path.dirname(dest)
+    map.sourceRoot = path.relative parent, ''
     await fs.write dest, content + @getSourceMapURL map
     return dest
 
@@ -66,11 +67,13 @@ else
   {sha256} = require 'cush/utils'
   bun.save = ->
     {content, map} = await @_result
+    parent = path.dirname(dest)
     name = path.basename(dest); i = name.indexOf '.'
     name = name.slice(0, i) + '.' + sha256(content, 8) + name.slice(i)
-    name = path.join path.dirname(dest), name
+    name = path.join parent, name
     await fs.mkdir path.dirname(name)
     await fs.write name, content + @getSourceMapURL name
+    map.sourceRoot = path.relative parent, ''
     await fs.write name + '.map', map.toString()
     return name
 
