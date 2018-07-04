@@ -55,25 +55,26 @@ try bun = cush.bundle main, {target, dev}
 catch err
   fatal err
 
+if path.isAbsolute dest
+  dest = path.relative process.cwd(), dest
+
+parent = path.dirname dest
+try require('fs').mkdirSync parent
+
+# The root of any mapped sources (relative to the sourcemap).
+sourceRoot = path.relative parent, ''
+
 if dev
-  bun.save = ->
-    {content, map} = await @_result
-    await fs.mkdir parent = path.dirname(dest)
-    map.sourceRoot = path.relative parent, ''
+  bun.save = ({content, map}) ->
     await fs.write dest, content + @getSourceMapURL map
     return dest
 
-else
+else do ->
   {sha256} = require 'cush/utils'
-  bun.save = ->
-    {content, map} = await @_result
-    parent = path.dirname(dest)
-    name = path.basename(dest); i = name.indexOf '.'
-    name = name.slice(0, i) + '.' + sha256(content, 8) + name.slice(i)
-    name = path.join parent, name
-    await fs.mkdir path.dirname(name)
-    await fs.write name, content + @getSourceMapURL name
-    map.sourceRoot = path.relative parent, ''
+  ext = path.extname dest
+  bun.save = ({content, map}) ->
+    name = dest.slice(0, 1 - ext.length) + sha256(content, 8) + ext
+    await fs.write name, content + @getSourceMapURL path.basename(name)
     await fs.write name + '.map', map.toString()
     return name
 
@@ -93,7 +94,8 @@ refresh = ->
   if result
     log ''
     log 'bundled in ' + log.lyellow(bun.elapsed + 'ms ⚡️')
-    name = await bun.save()
+    result.map.sourceRoot = sourceRoot
+    name = await bun.save result
     log "saved as #{log.lblue name} 💎"
     log ''
     return
