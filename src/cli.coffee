@@ -96,8 +96,17 @@ else do ->
 
 promise = null
 refresh = ->
-  result = await bun.read()
-  promise = null
+  try result = await bun.read()
+  catch err
+    if err.line?
+      log ''
+      log.error err.message
+      log '  ' + log.coal path.relative(process.cwd(), err.file) + ':' + err.line + ':' + err.column
+      log ''
+      return
+    fatal err
+  finally
+    promise = null
 
   if bun.missed.length
     log ''
