@@ -1,4 +1,4 @@
-# cush-cli v0.0.3
+# cush-cli v0.0.4
 
 The easiest way to bundle your project using `cush`.
 
