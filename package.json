@@ -1,6 +1,6 @@
 {
   "name": "cush-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "lib/index",
   "description": "Bundle your project when files change",
   "repository": "https://github.com/aleclarson/cush-cli.git",
