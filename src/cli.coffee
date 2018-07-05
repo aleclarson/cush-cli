@@ -13,8 +13,6 @@ if /^(-h)?$/.test args._
     process.exit()
 
 log = require 'lodge'
-log.prefix log.coal '[cli]'
-
 fatal = (err) ->
 
   if typeof err is 'string'
