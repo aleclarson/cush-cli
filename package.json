@@ -16,7 +16,8 @@
     "cush": "^0.1.0",
     "lodge": "^0.0.3",
     "saxon": "^0.1.4",
-    "slurm": "^0.3.0"
+    "slurm": "^0.3.0",
+    "wch": "^0.10.0"
   },
   "devDependencies": {
     "coffeescript": "^2.3.0",
