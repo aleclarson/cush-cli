@@ -38,6 +38,24 @@ if !target = args.t
   if target then target = target[1]
   else fatal 'must provide a target (-t)'
 
+wch = require 'wch'
+
+watching = null
+
+wch.on 'offline', ->
+  if watching isnt false
+    log.warn 'watch mode is ' + log.lred('disabled'), log.coal '(run `wch start` to enable it)'
+    watching = false
+  return
+
+wch.on 'connect', ->
+  if watching isnt true
+    log 'watch mode is ' + log.lgreen 'enabled'
+    watching = true
+  return
+
+wch.connect()
+
 fs = require 'saxon'
 path = require 'path'
 cush = require 'cush'
