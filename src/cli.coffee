@@ -2,15 +2,18 @@ slurm = require 'slurm'
 args = slurm
   o: true   # output path
   t: true   # target platform
+  f: true   # bundle format
   p: true   # production mode
   h: true   # help
 
+
 if /^(-h)?$/.test args._
   return do ->
-    fs = require 'saxon'
+    fs = require 'saxon/sync'
     path = require 'path'
-    console.log await fs.read path.resolve(__dirname, '../help.md')
+    console.log fs.read path.resolve(__dirname, '../help.md')
     process.exit()
+
 
 log = require 'lodge'
 fatal = (err) ->
@@ -20,23 +23,56 @@ fatal = (err) ->
     process.exit 1
 
   if process.env.DEBUG
-    stack = err.stack.replace err.name + ': ' + err.message + '\n', ''
-    stack = '\n' + log.gray stack
+    stack = parseStack err
 
-  log.error err.message + (stack or '')
+  log.error err.message +
+    if stack then '\n' + log.gray(stack) else ''
   process.exit 1
+
+parseStack = (err) ->
+  if err.stack then err.stack.slice 1 + err.stack.indexOf('\n    at ')
+
+#
+# process the arguments
+#
 
 if !main = args[0]
   fatal 'must provide an entry path'
 
-if !dest = args.o
+if !target = args.t
+  fatal 'must provide a target (-t)'
+
+cush = require 'cush'
+path = require 'path'
+
+project = cush.project process.cwd()
+bundles = project.config.bundles
+if config = bundles?[main]
+  {dest, format} = config
+
+if !dest or= args.o
   fatal 'must provide an output path (-o)'
 
-if !target = args.t
-  # get the ".web" from "bundle.web.js"
-  target = /\.([^./]+)\.[^./]+$/.exec dest
-  if target then target = target[1]
-  else fatal 'must provide a target (-t)'
+format or= args.f or
+  path.extname(dest)?.slice(1)
+
+if typeof format is 'string'
+  format = cush.formats[format] or require(format)
+
+if format?.constructor != Function
+  fatal 'must provide a format (-f)'
+
+config or= {}
+config.target = target
+config.format = format
+
+# development mode
+config.dev = dev = !args.p
+
+
+#
+# file watcher
+#
 
 wch = require 'wch'
 
@@ -56,85 +92,115 @@ wch.on 'connect', ->
 
 wch.connect()
 
-fs = require 'saxon'
-path = require 'path'
-cush = require 'cush'
 
-cush.on 'warning', (evt) ->
-  log.warn evt
+#
+# bundler errors/warnings
+#
 
 cush.on 'error', (evt) ->
   fatal evt.error
 
-dev = !args.p
-try bun = cush.bundle main, {target, dev}
+cush.on 'warning', (evt) ->
+  log.warn evt
+
+
+#
+# create the bundle
+#
+
+try bundle = cush.bundle main, config
 catch err
-  fatal err
+  switch err.code
+    when 'NO_FORMAT'
+      fatal 'must provide a bundle format (-f)'
+    else fatal err
+
+
+#
+# create dest directory (if needed)
+#
+
+fs = require 'saxon/sync'
 
 if path.isAbsolute dest
   dest = path.relative process.cwd(), dest
 
 parent = path.dirname dest
-try require('fs').mkdirSync parent
+try fs.mkdir parent
 
 # The root of any mapped sources (relative to the sourcemap).
 sourceRoot = path.relative parent, ''
 
+
+#
+# the bundle saver
+#
+
 if dev
-  bun.save = ({content, map}) ->
-    await fs.write dest, content + @getSourceMapURL map
+  bundle.save = ({content, map}) ->
+    fs.write dest, content + @getSourceMapURL map
     return dest
 
 else do ->
   {sha256} = require 'cush/utils'
   ext = path.extname dest
-  bun.save = ({content, map}) ->
+  bundle.save = ({content, map}) ->
     name = dest.slice(0, 1 - ext.length) + sha256(content, 8) + ext
-    await fs.write name, content + @getSourceMapURL path.basename(name)
-    await fs.write name + '.map', map.toString()
+    fs.write name, content + @getSourceMapURL path.basename(name)
+    fs.write name + '.map', map.toString()
     return name
 
-promise = null
-refresh = ->
-  try result = await bun.read()
+
+#
+# the bundle reader
+#
+
+reading = null
+readBundle = ->
+  log.clear()
+  log log.gray('building...')
+  try result = await bundle.read()
   catch err
+
     if err.line?
+      source = path.relative '', err.filename or err.file
+      source += ':' + err.line + ':' + (err.col ? err.column ? 0)
       log ''
-      log.error err.message
-      log '  ' + log.coal path.relative(process.cwd(), err.file) + ':' + err.line + ':' + err.column
+      log.error err.message + log.gray '\n    at ./' + source
+      log '\n' + err.snippet if err.snippet
+      log log.gray(stack) if stack = parseStack err
       log ''
       return
-    fatal err
-  finally
-    promise = null
 
-  if bun.missed.length
+    throw err
+
+  {state} = bundle
+  if state.missing
     log ''
-    log log.red 'failed to resolve dependencies: 🔥'
-    bun.missed.forEach ([mod, i]) ->
-      log '  ' + mod.deps[i].ref + log.coal(' from ') + bun.relative(mod)
+    log log.red 'Failed to resolve dependencies: 🔥'
+    state.missing.forEach ([asset, dep]) ->
+      log '  ' + dep.ref + log.coal(' from ') + bundle.relative asset.path()
     log ''
     return
 
   if result
     log ''
-    log 'bundled in ' + log.lyellow(bun.elapsed + 'ms ⚡️')
+    log 'Bundled in ' + log.lyellow(state.elapsed + 'ms ⚡️')
     result.map.sourceRoot = sourceRoot
-    name = await bun.save result
-    log "saved as #{log.lblue name} 💎"
+    name = await bundle.save result
+    log "Saved as #{log.lblue name} 💎"
     log ''
     return
 
+
 # The initial build.
-promise = refresh().catch fatal
+readBundle().catch fatal
 
 # Watch for changes in development mode.
-dev and cush.on 'change', (file) ->
-  if !bun.valid
-    log.clear()
-    promise or= refresh().catch fatal
-  return
+dev and bundle.on 'invalidate', ->
+  if !bundle.state.missing
+    readBundle().catch fatal
 
-# Exit after building in production mode.
-dev or promise.then ->
+# Exit after reading in production mode.
+dev or reading.then ->
   process.exit 0
