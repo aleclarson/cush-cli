@@ -13,7 +13,7 @@
     "cush": "./cush"
   },
   "dependencies": {
-    "cush": "^0.1.0",
+    "cush": "^0.2.0",
     "lodge": "^0.0.3",
     "saxon": "^0.1.4",
     "slurm": "^0.3.0",
