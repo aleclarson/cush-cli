@@ -23,9 +23,3 @@ cush index.js -o bundle.js -t web
 The `-p` flag minifies the bundle and exits after the first build.
 Additionally, the bundle name has a content hash. This is known as
 the "production" bundle.
-
-## Install
-
-```sh
-npm install -g cush-cli
-```
