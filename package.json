@@ -8,6 +8,11 @@
   "scripts": {
     "build": "coffee-build src -o lib"
   },
+  "files": [
+    "lib",
+    "cush",
+    "help.md"
+  ],
   "bin": {
     "cush": "./cush"
   },
