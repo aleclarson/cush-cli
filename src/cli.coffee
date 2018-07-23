@@ -52,8 +52,8 @@ cush = require CUSH_PATH
 
 project = cush.project process.cwd()
 bundles = project.config.bundles
-if config = bundles?[main]
-  {dest, format} = config
+if bundles and bundles[main]
+  {dest, format} = bundles[main]
 
 if !dest or= args.o
   fatal 'must provide an output path (-o)'
@@ -67,12 +67,8 @@ if typeof format is 'string'
 if format?.constructor != Function
   fatal 'must provide a format (-f)'
 
-config or= {}
-config.target = target
-config.format = format
-
 # development mode
-config.dev = dev = !args.p
+dev = !args.p
 
 
 #
@@ -113,7 +109,7 @@ cush.on 'warning', (evt) ->
 # create the bundle
 #
 
-try bundle = cush.bundle main, config
+try bundle = cush.bundle main, {format, target, dev}
 catch err
   switch err.code
     when 'NO_FORMAT'
