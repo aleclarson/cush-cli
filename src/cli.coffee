@@ -156,10 +156,11 @@ else do ->
 # the bundle reader
 #
 
+elaps = require 'elaps'
+
 reading = null
 readBundle = ->
-  log.clear()
-  log log.gray('building...')
+  timer = elaps()
   try result = await bundle.read()
   catch err
 
@@ -178,15 +179,17 @@ readBundle = ->
   {state} = bundle
   if state.missing
     log ''
-    log log.red 'Failed to resolve dependencies: 🔥'
+    log log.red 'Failed to resolve dependencies:'
     state.missing.forEach ([asset, dep]) ->
       log '  ' + dep.ref + log.coal(' from ') + bundle.relative asset.path()
     log ''
     return
 
   if result
+    {elapsed} = timer.stop()
+    elapsed = elapsed.toFixed if elapsed > 100 then 0 else 1
     log ''
-    log 'Bundled in ' + log.lyellow(state.elapsed + 'ms ⚡️')
+    log 'Bundled in %s ms ⚡️', log.lgreen elapsed
     result.map.sourceRoot = sourceRoot
     name = await bundle.save result
     log "Saved as #{log.lblue name} 💎"
@@ -195,13 +198,17 @@ readBundle = ->
 
 
 # The initial build.
+log log.blue('bundling...')
 readBundle().catch fatal
 
-# Watch for changes in development mode.
-dev and bundle.on 'invalidate', ->
-  if !bundle.state.missing
+if dev
+  bundle.on 'rebuild', ->
+    log.clear()
+    log log.blue('bundling...')
+
+  bundle.on 'invalidate', ->
     readBundle().catch fatal
 
 # Exit after reading in production mode.
-dev or reading.then ->
+else reading.then ->
   process.exit 0
