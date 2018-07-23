@@ -42,8 +42,13 @@ if !main = args[0]
 if !target = args.t
   fatal 'must provide a target (-t)'
 
-cush = require 'cush'
 path = require 'path'
+CUSH_PATH = path.join process.cwd(), 'node_modules', 'cush'
+try require.resolve CUSH_PATH
+catch err
+  CUSH_PATH = require.resolve 'cush'
+
+cush = require CUSH_PATH
 
 project = cush.project process.cwd()
 bundles = project.config.bundles
@@ -142,7 +147,7 @@ if dev
     return dest
 
 else do ->
-  {sha256} = require 'cush/utils'
+  {sha256} = require CUSH_PATH + '/utils'
   ext = path.extname dest
   bundle.save = ({content, map}) ->
     name = dest.slice(0, 1 - ext.length) + sha256(content, 8) + ext
